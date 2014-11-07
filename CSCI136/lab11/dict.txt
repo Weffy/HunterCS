@@ -1,0 +1,6 @@
+jacket  outerwear
+shirt  goes under a jacket
+pants  she stole my pants
+socks  to be put on before shoes
+shoes  to be worn over socks
+boots  an alternative to shoes
