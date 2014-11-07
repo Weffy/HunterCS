@@ -1,0 +1,113 @@
+Krirk Pongsema
+main() {
+x=2*foo(4*y+4);
+x=x+(4*y+4);
+}
+int foo (int n) {
+int junk[10] = {0,1,2,3,4,5,6,7,8,9};
+int junk2[8];  //Mod 1 (stored below (ie, higher address) junk on stack)
+junk[4] += 2 - junk2[7];  // Mod 2
+if (n<1) return 1;
+else return 2*bar(0,1,2-n,3,4*n,5)+junk[4]+foo(n-1); //Mod 3
+}
+# Allocate Registers: x-->$s0, y-->$s1
+# Assume optimizing compiler avoids computing 4*y+4 twice
+Main: add  $t0,$s1,$s1   # $t0 <-- 2y
+	add  $t0,$t0,$t0   # $t0 <-- 4y
+	addi $t0,$t0,4     # $t0 <-- 4y+4
+	addi $sp,$sp,-4    # Push $t0
+	sw   $t0,0($sp)    
+	add  $a0,$t0,$zero # arg0 <-- 4y+4
+	jal  Foo           # Call foo
+	lw   $t0,0($sp)    # Pop $to
+	addi $sp,$sp,4     # 
+	add  $s0,$v0,$v0   # x <-- 2*foo(4*y+4)
+	add  $s0,$t0,$s0   # x <-- x+4*y+4
+	...                # End of Main
+Foo:  addi $sp,$sp,-80   # Push: mod 1: added 32 more bits to fit junk2[8]
+	sw   $ra,76($sp)   #   $ra mod 1
+	sw   $fp,72($sp)   #   $fp mod 1
+	addi $fp,$sp,76    # Set $fp to point to frame mod 1
+	add  $t1,$zero,$zero # $t1 <-- 0
+	sw   $t1,-76($fp)  # junk[0] <-- 0 mod 1
+	addi $t1,$t1,1     # $t1 <-- 1 
+	sw   $t1,-72($fp)  # junk[1] <-- 1 mod 1
+#mod 1 junk 1
+	addi $t1, $t1, 2 # $t1 <-- 2
+	sw $t1, -68($fp) #junk[2] <-- 2 
+	addi $t1, $t1, 3 # $t1 <-- 3
+	sw $t1, -64($fp) #junk[3] <-- 3 
+	addi $t1, $t1, 4 # $t1 <-- 4
+	sw $t1, -68($fp) #junk[4] <-- 4 
+	addi $t1, $t1, 5 # $t1 <-- 5
+	sw $t1, -68($fp) #junk[5] <-- 5 
+	addi $t1, $t1, 6 # $t1 <-- 6
+	sw $t1, -68($fp) #junk[6] <-- 6 
+	addi $t1, $t1, 7 # $t1 <-- 7
+	sw $t1, -68($fp) #junk[7] <-- 7 
+	addi $t1, $t1, 8 # $t1 <-- 8
+	sw $t1, -68($fp) #junk[8] <-- 8 
+	addi $t1, $t1, 9 # $t1 <-- 9
+	sw $t1, -68($fp) #junk[9] <-- 9 
+# junk 2
+	add $t1, $zero, $zero # $t1 <-- 0
+	sw $t1, -36($fp) # junk2[0] <-- 0
+	addi $t1, $t1, 1 # $t1 <-- 1
+	sw $t1 -32($fp) # junk2[1] <-- 1
+	addi $t1, $t1, 2 # $t1 <-- 2
+	sw $t1 -28($fp) # junk2[2] <-- 2
+	addi $t1, $t1, 3 # $t1 <-- 3
+	sw $t1 -24($fp) # junk2[3] <-- 3
+	addi $t1, $t1, 4 # $t1 <-- 4
+	sw $t1 -20($fp) # junk2[4] <-- 4
+	addi $t1, $t1, 5 # $t1 <-- 5
+	sw $t1 -16($fp) # junk2[5] <-- 5
+	addi $t1, $t1, 6 # $t1 <-- 6
+	sw $t1 -12($fp) # junk2[6] <-- 6
+	addi $t1, $t1, 7 # $t1 <-- 7
+	sw $t1 -8($fp) # junk2[7] <-- 7	
+	lw   $t1,-68($fp)  # $t1 <-- junk[4] mod 2
+	addi $t1,$t1,2     # $t1 <-- junk[4]+2
+	lw $t2, -8($fp) # $t2 <-- junk2[7]
+	sub $t1, $t1, $t2 # $t1 <-- (junk[4]+2) - junk2[7]
+	sw   $t1,-68($fp)  # junk[4] += 2 mod 2
+	slti $t0,$a0,1     # $t0 <-- 1 if n<1; 0 otherwise
+	bne  $t0,$zero,ReturnOne # Return 1 if n<1
+#pre-call
+#1. push caller-saved regs onto stack
+	add $sp, $sp, -4 #push
+	sw $a0, 0($sp) #N onto stack
+#2. if there are more than 4 args, push extra args onto stack
+	add $t2, $zero, $a0 # $t2 <-- $a0 (N)
+	add $t1, $t2, $t2 #$t1 <-- 2N
+	add $t1, $t1, $t1 #$t1 <-- 4N
+	add $sp, $sp, -4 #push
+	sw $t1, 0($sp) #4N(arg 5) onto stack
+	add $t1, $zero, $zero # $t1 <-- 0
+	addi $t1, $t1, 5 #$t1 <-- 5
+	add $sp, $sp, -4 #push
+	sw $t1, 0($sp) #5 (arg 6) onto stack
+#place first four args in $a0 ... $a3
+	add $a0, $zero, $zero # $a0 <-- 0
+	addi $a1, $zero, 1 # $a1 <-- 1
+	sub $t2, $zero, $t2 # $t2 <-- -N
+	addi $a2, $t2, 2 # $a2 <-- 2 - N
+	addi $a3, $zero, 3 # $a3 <-- 3
+	jal bar # call bar
+# Call foo(n-1)
+	addi $sp,$sp,-4    # Push
+	sw   $a0,0($sp)    # ... $a0
+	addi $a0,$a0,-1    # arg0 <-- n-1
+jal  Foo           # Call foo(n-1)
+lw   $a0,0($sp)    # Pop $a0
+addi $sp,$sp,4     
+lw   $t1,-68($fp)  # $t1 <-- junk[4] mod 1
+add $v0, $v0, $v0 # $v0 <-- 2*bar
+add $v0, $v0, $v1 # $v0 <-- 2*bar+foo(n-1)
+add  $v0,$v0,$t1   # $v0 <-- 2*bar+foo(n-1)+junk[4]
+j    Return        # Return
+ReturnOne: addi $v0,$zero,1   # $v0 <-- 1
+Return: lw   $fp,72($sp)   # pop $fp mod 1
+lw   $ra,76($sp)   # pop $ra mod 1
+addi $sp,$sp,80    # reclaim stack space mod 1
+jr   $ra           # return to caller
