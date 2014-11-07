@@ -1,0 +1,1 @@
+there are 7 words, and they are: I love C++ and I love programming 
